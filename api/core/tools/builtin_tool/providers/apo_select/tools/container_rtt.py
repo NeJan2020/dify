@@ -3,7 +3,8 @@ from collections.abc import Generator
 from dataclasses import asdict
 from typing import Any, Optional
 
-from core.tools.builtin_tool.providers.metric_source import query_metric
+from api.core.tools.builtin_tool.providers.data_source import query_metric
+
 from core.tools.builtin_tool.tool import BuiltinTool
 from core.tools.entities.tool_entities import ToolInvokeMessage
 from libs.apo_utils import APOUtils

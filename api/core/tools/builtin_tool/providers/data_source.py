@@ -5,14 +5,13 @@ import requests
 from pydantic import ValidationError
 
 from configs import dify_config
-from libs.apo_utils import APOUtils
 
 ProviderPriority = ["apo", "prometheusmetric"]  # 优先分析 apo / prometheus 的返回结果
 ProviderPriorityIndex = {v: i for i, v in enumerate(ProviderPriority)}  # 优化索引查找
 
 
 @dataclass
-class QueryResult:
+class QueryMetricResult:
     type: str = "metric"
     display: bool = True
     unit: str = ""
@@ -26,7 +25,7 @@ def query_metric(
     step: int,
     labels: Optional[dict[str, str]] = None,
     compare: Optional[list[str]] = None,
-) -> QueryResult:
+) -> QueryMetricResult:
     """
     根据配置查询指标，统一返回 QueryResult 对象。
 
@@ -49,7 +48,7 @@ def query_metric(
         start_ts = to_int(start_time)
         end_ts = to_int(end_time)
 
-        if dify_config.METRIC_SOURCE == "dataplane":
+        if dify_config.DATA_SOURCE == "dataplane":
             # 调用 dataplane 查询
             return __query_metric_by_dataplane(
                 metric_name=metric_name,
@@ -71,14 +70,13 @@ def query_metric(
 
     except Exception as e:
         # 捕获异常，返回空 QueryResult 或自定义错误处理
-        print(f"Error querying metric {metric_name} by {dify_config.METRIC_SOURCE}: {e}")
-        return QueryResult(
+        print(f"Error querying metric {metric_name} by {dify_config.DATA_SOURCE}: {e}")
+        return QueryMetricResult(
             type="metric",
             display=True,
             unit="",
             data={"timeseries": []},
         )
-
 
 from typing import Optional
 
@@ -173,7 +171,7 @@ def __query_metric_by_dataplane(
     step: int,
     labels: dict[str, str],
     compare: list[str],
-) -> QueryResult:
+) -> QueryMetricResult:
     """
     Query metric by dataplane
 
@@ -206,7 +204,7 @@ def __query_metric_by_dataplane(
         data = resp.json()
         if error := data.get("error"):
             print(f"Error querying metric: {error}")
-            return QueryResult(type="metric", display=True, unit="", data={"timeseries": []})
+            return QueryMetricResult(type="metric", display=True, unit="", data={"timeseries": []})
         mr = QueryMetricsResponse.model_validate(resp.json())
         return __convert_metric_results(mr)
     except requests.RequestException as e:
@@ -216,25 +214,25 @@ def __query_metric_by_dataplane(
     except Exception as e:
         print(f"Unexpected error: {e}")
 
-    return QueryResult(type="metric", display=True, unit="", data={"timeseries": []})
+    return QueryMetricResult(type="metric", display=True, unit="", data={"timeseries": []})
 
 
 def __convert_metric_results(
     metric_response: QueryMetricsResponse,
-) -> QueryResult:
+) -> QueryMetricResult:
     if not metric_response.data:
-        return QueryResult(type="metric", display=True, unit="", data={"timeseries": []})
+        return QueryMetricResult(type="metric", display=True, unit="", data={"timeseries": []})
 
     # TODO merge different metric results' timeseries, need to ensure unit consistency
     metricResult = __select_highest_priority_result(metric_response)
     if metricResult is None:
-        return QueryResult(type="metric", display=True, unit="", data={"timeseries": []})
+        return QueryMetricResult(type="metric", display=True, unit="", data={"timeseries": []})
 
     if metricResult.error or not metricResult.metrics or not metricResult.metrics.result.timeseries:
-        return QueryResult(type="metric", display=True, unit="", data={"timeseries": []})
+        return QueryMetricResult(type="metric", display=True, unit="", data={"timeseries": []})
 
     mr = metricResult.metrics.result
-    return QueryResult(
+    return QueryMetricResult(
         type="metric",
         display=True,
         unit=mr.unit,
@@ -269,7 +267,7 @@ def __query_metric_by_apo(
     end_ts: int,
     step: int,
     labels: dict[str, str],
-) -> QueryResult:
+) -> QueryMetricResult:
     reqBody = {
         "metricName": metric_name,
         "params": labels or {},
@@ -280,7 +278,7 @@ def __query_metric_by_apo(
 
     resp = requests.post(dify_config.APO_BACKEND_URL + "/api/metric/query", json=reqBody)
     list = resp.json()["result"]
-    return QueryResult(
+    return QueryMetricResult(
         type="metric",
         display=True,
         unit=list["unit"],
