@@ -56,80 +56,42 @@ def query_service_name(
     start_time: Any,
     end_time: Any,
 ) -> str:
-
     start_ts = to_int(start_time)
     end_ts = to_int(end_time)
 
+    request_body = {
+        "cluster": cluster,
+        "endTime": end_ts,
+        "startTime": start_ts,
+        "tags": {
+            "containerId": container_id,
+            "nodeName": node,
+            "pid": pid,
+            "pod": pod
+        }
+    }
+
+    url = ""
     if dify_config.DATA_SOURCE == 'apo':
-        request_body = {
-            "cluster": cluster,
-            "endTime": end_ts,
-            "startTime": start_ts,
-            "tags": {
-                "containerId": container_id,
-                "nodeName": node,
-                "pid": pid,
-                "pod": pod
-            }
-        }
-
-        response = requests.post(
-            f"{dify_config.APO_BACKEND_URL}/cached/queryServiceNames",
-            json=request_body,
-            timeout=10,
-        )
-        response.raise_for_status()
-        result = response.json().get("result", {})
-
-        formatted_data = json.dumps(
-            {
-                "type": "list",
-                "display": True,
-                "data": result,
-            },
-            indent=2,
-        )
-        return formatted_data
+        url = f"{dify_config.APO_BACKEND_URL}/api/dataplane/queryServiceNames"
     else:
-        strFilters = {}
-        if container_id:
-            strFilters["containerId"] = container_id
-        if node:
-            strFilters["nodeName"] = node
-        if pid:
-            strFilters["pid"] = pid
-        if pod:
-            strFilters["pod"] = pod
+        url = f"{dify_config.DATAPLANE_URL}/cached/queryServiceNames"
 
-        request_body = {
-            "startTime": start_ts,
-            "endTime": end_ts,
-            "simpleQuery": {
-                "stringFieldsFilter": strFilters
-            }
-        }
-        response = requests.post(
-            f"{dify_config.DATAPLANE_URL}/cached/queryServiceNames",
-            json=request_body,
-            timeout=10,
-        )
-        response.raise_for_status()
-        services = response.json().get("data", [])
+    response = requests.post(
+        url,
+        json=request_body,
+        timeout=10,
+    )
+    response.raise_for_status()
+    result = response.json().get("result", {})
 
-        serviceName = ""
-        for service in services:
-            # only take the first service name
-            if service["name"] != "":
-                serviceName = service["name"]
-                break
-
-        formatted_data = json.dumps(
-            {
-                "type": "list",
-                "display": True,
-                "data": serviceName,
-            },
-            indent=2,
-        )
-        return formatted_data
+    formatted_data = json.dumps(
+        {
+            "type": "list",
+            "display": True,
+            "data": result,
+        },
+        indent=2,
+    )
+    return formatted_data
 

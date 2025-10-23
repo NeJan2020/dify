@@ -31,18 +31,20 @@ class ServiceTopologyTool(BuiltinTool):
         }
 
         try:
+            url = ""
+            if dify_config.DATA_SOURCE == 'apo':
+                url = f"{dify_config.APO_BACKEND_URL}/api/dataplane/topology"
+            else:
+                url = f"{dify_config.DATAPLANE_URL}/dataplane/topology"
+
             response = requests.get(
-                f"{dify_config.DATAPLANE_URL}/cached/queryTopology",
+                url,
                 params=query_params,
                 timeout=10,
             )
             response.raise_for_status()
 
-            result = []
-            if dify_config.DATA_SOURCE == 'apo':
-                result = response.json().get("results", {})
-            else:
-                result = response.json().get("data", {})
+            result = response.json().get("results", [])
 
             current_node = next((node for node in result if node["name"] == service), None)
             if not current_node:

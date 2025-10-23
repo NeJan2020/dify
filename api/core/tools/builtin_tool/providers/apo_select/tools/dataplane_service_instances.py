@@ -31,12 +31,11 @@ class ServiceInstancesTool(BuiltinTool):
         }
 
         try:
-
             url = ""
             if dify_config.DATA_SOURCE == 'apo':
                 url = f"{dify_config.APO_BACKEND_URL}/api/dataplane/instances"
             else:
-                url = f"{dify_config.DATAPLANE_URL}/cached/instances"
+                url = f"{dify_config.DATAPLANE_URL}/dataplane/instances"
 
             response = requests.get(
                 url,
@@ -45,14 +44,7 @@ class ServiceInstancesTool(BuiltinTool):
             )
             response.raise_for_status()
 
-            result = []
-            if dify_config.DATA_SOURCE == 'apo':
-                result = response.json().get("results", [])
-            else:
-                result = response.json().get("data", [])
-                for instance in result:
-                    normalize_pid(instance)
-
+            result = response.json().get("results", [])
             formatted_data = json.dumps(
                 {
                     "type": "list",
@@ -65,7 +57,7 @@ class ServiceInstancesTool(BuiltinTool):
             yield self.create_text_message(formatted_data)
 
         except requests.RequestException as e:
-            yield self.create_text_message(json.dumps({"error" : f"Error: Failed to fetch data from API. {str(e)}"}))
+            yield self.create_text_message(json.dumps({"error": f"Error: Failed to fetch data from API. {str(e)}"}))
         except json.JSONDecodeError:
             yield self.create_text_message(json.dumps({"error": "Error: Invalid JSON response from API."}))
         except Exception as e:
