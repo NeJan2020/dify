@@ -33,13 +33,17 @@ class ServiceInstancesTool(BuiltinTool):
 
         try:
             response = requests.get(
-                f"{dify_config.APO_BACKEND_URL}/api/dataplane/instances",
+                f"{dify_config.DATAPLANE_URL}/cached/instances",
                 params=query_params,
                 timeout=10,
             )
             response.raise_for_status()
 
-            result = response.json().get("results", {})
+            result = {}
+            if dify_config.DATA_SOURCE == 'apo':
+                result = response.json().get("results", {})
+            else:
+                result = response.json().get("data", {})
 
             formatted_data = json.dumps(
                 {

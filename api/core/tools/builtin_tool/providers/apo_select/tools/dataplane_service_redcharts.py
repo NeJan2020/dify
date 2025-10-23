@@ -77,7 +77,7 @@ def query_service_redcharts(
     if dify_config.DATA_SOURCE == 'apo':
         result = response.json().get("results", {})
     else:
-        esult = response.json().get("data", {})
+        result = response.json().get("data", {})
 
     formatted_data = json.dumps(
         {

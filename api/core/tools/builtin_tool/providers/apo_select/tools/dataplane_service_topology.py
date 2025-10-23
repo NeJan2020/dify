@@ -1,13 +1,12 @@
 import json
 from collections.abc import Generator
-from typing import Any, Optional, Dict
+from typing import Any, Dict, Optional
 
 import requests
 
 from configs import dify_config
 from core.tools.builtin_tool.tool import BuiltinTool
 from core.tools.entities.tool_entities import ToolInvokeMessage
-from libs.apo_utils import APOUtils
 
 
 class ServiceTopologyTool(BuiltinTool):
@@ -33,13 +32,17 @@ class ServiceTopologyTool(BuiltinTool):
 
         try:
             response = requests.get(
-                f"{dify_config.APO_DATA}/api/dataplane/topology",
+                f"{dify_config.DATAPLANE_URL}/cached/queryTopology",
                 params=query_params,
                 timeout=10,
             )
             response.raise_for_status()
 
-            result = response.json().get("results", [])
+            result = []
+            if dify_config.DATA_SOURCE == 'apo':
+                result = response.json().get("results", {})
+            else:
+                result = response.json().get("data", {})
 
             current_node = next((node for node in result if node["name"] == service), None)
             if not current_node:
