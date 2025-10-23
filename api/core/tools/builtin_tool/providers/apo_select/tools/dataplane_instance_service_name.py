@@ -73,9 +73,9 @@ def query_service_name(
 
     url = ""
     if dify_config.DATA_SOURCE == 'apo':
-        url = f"{dify_config.APO_BACKEND_URL}/api/dataplane/queryServiceNames"
+        url = f"{dify_config.APO_BACKEND_URL}/api/dataplane/servicename"
     else:
-        url = f"{dify_config.DATAPLANE_URL}/dataplane/queryServiceNames"
+        url = f"{dify_config.DATAPLANE_URL}/dataplane/servicename"
 
     response = requests.post(
         url,
