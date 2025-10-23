@@ -50,7 +50,7 @@ class ServiceTopologyTool(BuiltinTool):
                 return {
                     "endpoint": node["id"],
                     "group": node["category"],
-                    "isTraced": True,  
+                    "isTraced": True,
                     "service": node["name"],
                     "system": node["category"]
                 }

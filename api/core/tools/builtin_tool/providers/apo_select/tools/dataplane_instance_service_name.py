@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional
 import requests
 
 from configs import dify_config
+from core.tools.builtin_tool.providers.data_source import to_int
 from core.tools.builtin_tool.tool import BuiltinTool
 from core.tools.entities.tool_entities import ToolInvokeMessage
 
@@ -108,7 +109,7 @@ def query_service_name(
             }
         }
         response = requests.post(
-            f"{dify_config.DATAPLANE_URL}/datasource/queryServiceNames",
+            f"{dify_config.DATAPLANE_URL}/apo/queryServiceNames",
             json=request_body,
             timeout=10,
         )
@@ -132,25 +133,3 @@ def query_service_name(
         )
         return formatted_data
 
-
-def to_int(value: Any, default: Optional[int] = None) -> int:
-    if isinstance(value, int):
-        return value
-    if value is None:
-        if default is not None:
-            return default
-        raise ValueError("Cannot convert None to int")
-    try:
-        if isinstance(value, str):
-            value = value.strip()
-            if not value:
-                if default is not None:
-                    return default
-                raise ValueError("Empty string cannot be converted to int")
-            if "." in value:
-                return int(float(value))
-        return int(value)
-    except (ValueError, TypeError):
-        if default is not None:
-            return default
-        raise
