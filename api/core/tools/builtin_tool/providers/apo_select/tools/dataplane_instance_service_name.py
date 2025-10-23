@@ -74,7 +74,7 @@ def query_service_name(
         }
 
         response = requests.post(
-            f"{dify_config.APO_BACKEND_URL}/api/dataplane/servicename",
+            f"{dify_config.APO_BACKEND_URL}/cached/queryServiceNames",
             json=request_body,
             timeout=10,
         )

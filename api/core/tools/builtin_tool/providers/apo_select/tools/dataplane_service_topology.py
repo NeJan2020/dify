@@ -33,7 +33,7 @@ class ServiceTopologyTool(BuiltinTool):
 
         try:
             response = requests.get(
-                f"{dify_config.APO_BACKEND_URL}/api/dataplane/topology",
+                f"{dify_config.APO_DATA}/api/dataplane/topology",
                 params=query_params,
                 timeout=10,
             )
@@ -70,7 +70,7 @@ class ServiceTopologyTool(BuiltinTool):
             ]
 
             formatted_data = json.dumps({
-                "type": "toopology",
+                "type": "topology",
                 "display": True,
                 "data": {
                     "children": formatted_children,

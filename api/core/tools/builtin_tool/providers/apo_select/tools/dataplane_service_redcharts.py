@@ -64,7 +64,7 @@ def query_service_redcharts(
     if dify_config.DATA_SOURCE == 'apo':
         url = f"{dify_config.APO_BACKEND_URL}/api/dataplane/redcharts"
     else:
-        url = f"{dify_config.DATAPLANE_URL}/apo/redcharts"
+        url = f"{dify_config.DATAPLANE_URL}/cached/queryEndpointRedCharts"
 
     response = requests.get(
         url,
