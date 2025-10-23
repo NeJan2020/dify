@@ -109,7 +109,7 @@ def query_service_name(
             }
         }
         response = requests.post(
-            f"{dify_config.DATAPLANE_URL}/apo/queryServiceNames",
+            f"{dify_config.DATAPLANE_URL}/cached/queryServiceNames",
             json=request_body,
             timeout=10,
         )
