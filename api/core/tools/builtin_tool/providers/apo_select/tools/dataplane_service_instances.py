@@ -1,13 +1,12 @@
 import json
 from collections.abc import Generator
-from typing import Any, Optional, Dict
+from typing import Any, Dict, Optional
 
 import requests
 
 from configs import dify_config
 from core.tools.builtin_tool.tool import BuiltinTool
 from core.tools.entities.tool_entities import ToolInvokeMessage
-from libs.apo_utils import APOUtils
 
 
 class ServiceInstancesTool(BuiltinTool):
@@ -32,18 +31,27 @@ class ServiceInstancesTool(BuiltinTool):
         }
 
         try:
+
+            url = ""
+            if dify_config.DATA_SOURCE == 'apo':
+                url = f"{dify_config.APO_BACKEND_URL}/api/dataplane/instances"
+            else:
+                url = f"{dify_config.DATAPLANE_URL}/cached/instances"
+
             response = requests.get(
-                f"{dify_config.DATAPLANE_URL}/cached/instances",
+                url,
                 params=query_params,
                 timeout=10,
             )
             response.raise_for_status()
 
-            result = {}
+            result = []
             if dify_config.DATA_SOURCE == 'apo':
-                result = response.json().get("results", {})
+                result = response.json().get("results", [])
             else:
-                result = response.json().get("data", {})
+                result = response.json().get("data", [])
+                for instance in result:
+                    normalize_pid(instance)
 
             formatted_data = json.dumps(
                 {
@@ -63,3 +71,12 @@ class ServiceInstancesTool(BuiltinTool):
         except Exception as e:
             yield self.create_text_message(json.dumps({"error": f"Error: An unexpected error occurred. {str(e)}"}))
 
+
+def normalize_pid(instance: dict) -> None:
+    """如果存在 processpid,则将其转换为 int 并保存为 pid"""
+    if "processpid" in instance:
+        try:
+            instance["pid"] = int(instance["processpid"])
+        except (ValueError, TypeError):
+            # 转换失败则删除或置空，视需求而定
+            instance["pid"] = None
