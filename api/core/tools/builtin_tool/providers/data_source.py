@@ -78,6 +78,7 @@ def query_metric(
             data={"timeseries": []},
         )
 
+
 from typing import Optional
 
 from pydantic import BaseModel, Field
@@ -205,7 +206,7 @@ def __query_metric_by_dataplane(
         if error := data.get("error"):
             print(f"Error querying metric: {error}")
             return QueryMetricResult(type="metric", display=True, unit="", data={"timeseries": []})
-        mr = QueryMetricsResponse.model_validate(resp.json())
+        mr = QueryMetricsResponse.model_validate(data)
         return __convert_metric_results(mr)
     except requests.RequestException as e:
         print(f"HTTP request failed: {e}")
@@ -307,3 +308,83 @@ def to_int(value: Any, default: Optional[int] = None) -> int:
         if default is not None:
             return default
         raise
+
+
+class QueryServiceRedChartsResponse(BaseModel):
+    msg: str
+    results: list[MetricResult] = Field(default_factory=list)
+
+
+def query_red_metrics(
+    title: str,
+    service: str,
+    cluster: str,
+    start_time: Any,
+    end_time: Any,
+    endpoint: str,
+) -> QueryMetricResult:
+    """
+
+    Args:
+        title (str): Options: ["Response Time","Error Rate","Tpm","Success Rate"]
+        service (str): service_name
+        cluster (str): cluster
+        start_time (Any): start_ts in microseconds
+        end_time (Any): end_ts in microseconds
+        endpoint (str): content_key
+
+    Returns:
+        QueryMetricResult: metric result
+    """
+    start_ts = to_int(start_time)
+    end_ts = to_int(end_time)
+
+    request_params = {"service": service, "cluster": "", "startTime": start_ts, "endTime": end_ts, "endpoint": endpoint}
+
+    resp = requests.get(
+        f"{dify_config.DATAPLANE_URL}/dataplane/redcharts",
+        params=request_params,
+        timeout=10,
+    )
+    resp.raise_for_status()
+
+    data = resp.json()
+    if error := data.get("error"):
+        print(f"Error querying metric: {error}")
+        return QueryMetricResult(type="metric", display=True, unit="", data={"timeseries": []})
+    mr = QueryServiceRedChartsResponse.model_validate(data)
+    return __convert_red_results(title, mr)
+
+
+def __convert_red_results(
+    title: str,
+    metric_response: QueryServiceRedChartsResponse,
+) -> QueryMetricResult:
+    if not metric_response.results:
+        return QueryMetricResult(type="metric", display=True, unit="", data={"timeseries": []})
+
+    for metric in metric_response.results:
+        if metric.title == title:
+            return QueryMetricResult(
+                type="metric",
+                display=True,
+                unit=metric.unit,
+                data={"timeseries": [m.model_dump() for m in metric.timeseries]},
+            )
+        elif metric.title == "Error Rate" and title == "Success Rate":
+            return __error_rate_to_success_rate(metric)
+
+    return QueryMetricResult(type="metric", display=True, unit="", data={"timeseries": []})
+
+
+def __error_rate_to_success_rate(error_rate: MetricResult) -> QueryMetricResult:
+    for ts in error_rate.timeseries:
+        for key, value in ts.chart.chartData.items():
+            ts.chart.chartData[key] = round((100 - value) / 100, 2)
+
+    return QueryMetricResult(
+        type="metric",
+        display=True,
+        unit="percentunit",
+        data={"timeseries": [m.model_dump() for m in error_rate.timeseries]},
+    )
