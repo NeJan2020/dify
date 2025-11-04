@@ -199,7 +199,7 @@ def __query_metric_by_dataplane(
             compare=compare,
         )
 
-        resp = requests.post(url, json=req.model_dump_json())
+        resp = requests.post(url, json=req.model_dump())
         resp.raise_for_status()
 
         data = resp.json()
